@@ -115,20 +115,7 @@ static struct step_chg_cfg step_chg_config = {
  * range data must be in increasing ranges and shouldn't overlap.
  * Gaps are okay
  */
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
-static struct jeita_fcc_cfg jeita_fcc_config = {
-	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
-	.prop_name	= "BATT_TEMP",
-	.hysteresis	= 0, /* 1degC hysteresis */
-	.fcc_cfg	= {
-		/* TEMP_LOW	TEMP_HIGH	FCC */
-		{0,		50,		300000},
-		{51,		150,		900000},
-		{151,	450,		2900000},
-		{451,	600,		1500000},
-	},
-};
-#elif defined(CONFIG_KERNEL_CUSTOM_F7A)
+
 static struct jeita_fcc_cfg jeita_fcc_config = {
 	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
 	.prop_name	= "BATT_TEMP",
@@ -141,33 +128,7 @@ static struct jeita_fcc_cfg jeita_fcc_config = {
 		{451,	600,		2000000},
 	},
 };
-#elif defined(CONFIG_KERNEL_CUSTOM_E7S)
-static struct jeita_fcc_cfg jeita_fcc_config = {
-	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
-	.prop_name	= "BATT_TEMP",
-	.hysteresis	= 0, /* 1degC hysteresis */
-	.fcc_cfg	= {
-		/* TEMP_LOW	TEMP_HIGH	FCC */
-		{0,		50,		400000},
-		{51,		150,		1200000},
-		{151,		450,		2500000},
-		{451,		600,		1200000},
-	},
-};
-#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
-static struct jeita_fcc_cfg jeita_fcc_config = {
-	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
-	.prop_name	= "BATT_TEMP",
-	.hysteresis	= 0, /* 1degC hysteresis */
-	.fcc_cfg	= {
-		/* TEMP_LOW	TEMP_HIGH	FCC */
-		{0,		50,		400000},
-		{51,		150,		1200000},
-		{151,		450,		2500000},
-		{451,		600,		2000000},
-	},
-};
-#endif
+
 static struct jeita_fv_cfg jeita_fv_config = {
 	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
 	.prop_name	= "BATT_TEMP",
