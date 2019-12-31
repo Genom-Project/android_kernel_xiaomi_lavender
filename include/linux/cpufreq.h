@@ -75,6 +75,8 @@ struct cpufreq_policy {
 					 * governors are used */
 	unsigned int		restore_freq; /* = policy->cur before transition */
 	unsigned int		suspend_freq; /* freq to set during suspend */
+	unsigned int		util;	/* CPU utilization at max frequency */
+	unsigned int		load_at_max;  /* CPU utilization at max frequency */
 
 	unsigned int		policy; /* see above */
 	unsigned int		last_policy; /* policy before unplug */
@@ -421,6 +423,9 @@ struct cpufreq_govinfo {
 };
 extern struct atomic_notifier_head cpufreq_govinfo_notifier_list;
 
+void cpufreq_notify_utilization(struct cpufreq_policy *policy,
+		unsigned int load);
+
 #else /* CONFIG_CPU_FREQ */
 static inline int cpufreq_register_notifier(struct notifier_block *nb,
 						unsigned int list)
@@ -543,6 +548,9 @@ extern struct cpufreq_governor cpufreq_gov_schedutil;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_DARKNESS)
 extern struct cpufreq_governor cpufreq_gov_darkness;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_darkness)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVEX)
+extern struct cpufreq_governor cpufreq_gov_interactivex;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_interactivex)
 #endif
 
 static inline void cpufreq_policy_apply_limits(struct cpufreq_policy *policy)
