@@ -88,7 +88,6 @@
 		(x)->i_mode = ((x)->i_mode & S_IFMT) | 0775;\
 	} while (0)
 
-
 /* Android 5.0 support */
 
 /* Permission mode for a specific node. Controls how file permissions

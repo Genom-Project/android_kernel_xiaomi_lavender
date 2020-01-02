@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2017, 2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -55,6 +55,9 @@
 /* parameters related to SKE_Send_EKS message */
 #define SKE_SEND_EKS_MESSAGE_SIZE \
 	(MESSAGE_ID_SIZE+BITS_128_IN_BYTES+BITS_64_IN_BYTES)
+
+#define HDCP2_0_REPEATER_DOWNSTREAM BIT(1)
+#define HDCP1_DEVICE_DOWNSTREAM BIT(0)
 
 /* all message IDs */
 #define INVALID_MESSAGE_ID               0
@@ -552,6 +555,7 @@ struct hdcp_lib_handle {
 	enum hdcp_state hdcp_state;
 	enum hdcp_lib_wakeup_cmd wakeup_cmd;
 	bool repeater_flag;
+	bool non_2p2_present;
 	bool update_stream;
 	bool tethered;
 	struct qseecom_handle *qseecom_handle;
@@ -1791,6 +1795,7 @@ static int hdcp_lib_wakeup_thread(struct hdcp_lib_wakeup_data *data)
 	case HDCP_LIB_WKUP_CMD_START:
 		handle->no_stored_km_flag = 0;
 		handle->repeater_flag = false;
+		handle->non_2p2_present = false;
 		handle->update_stream = false;
 		handle->last_msg_sent = 0;
 		handle->last_msg = INVALID_MESSAGE_ID;
@@ -2188,6 +2193,14 @@ static void hdcp_lib_msg_recvd(struct hdcp_lib_handle *handle)
 				  QSEECOM_ALIGN(sizeof
 						(struct hdcp_rcvd_msg_rsp)));
 
+	if (msg[0] == REPEATER_AUTH_SEND_RECEIVERID_LIST_MESSAGE_ID) {
+		if ((msg[2] & HDCP2_0_REPEATER_DOWNSTREAM) ||
+		   (msg[2] & HDCP1_DEVICE_DOWNSTREAM))
+			handle->non_2p2_present = true;
+		else
+			handle->non_2p2_present = false;
+	}
+
 	/* get next message from sink if we receive H PRIME on no store km */
 	if ((msg[0] == AKE_SEND_H_PRIME_MESSAGE_ID) &&
 	    handle->no_stored_km_flag) {
@@ -2315,19 +2328,20 @@ bool hdcp1_check_if_supported_load_app(void)
 
 	/* start hdcp1 app */
 	if (hdcp1_supported && !hdcp1_handle->qsee_handle) {
+		mutex_init(&hdcp1_ta_cmd_lock);
 		rc = qseecom_start_app(&hdcp1_handle->qsee_handle,
 				HDCP1_APP_NAME,
 				QSEECOM_SBUFF_SIZE);
 		if (rc) {
 			pr_err("hdcp1 qseecom_start_app failed %d\n", rc);
 			hdcp1_supported = false;
+			hdcp1_srm_supported = false;
 			kfree(hdcp1_handle);
 		}
 	}
 
 	/* if hdcp1 app succeeds load SRM TA as well */
 	if (hdcp1_supported && !hdcp1_handle->srm_handle) {
-		mutex_init(&hdcp1_ta_cmd_lock);
 		rc = qseecom_start_app(&hdcp1_handle->srm_handle,
 				SRMAPP_NAME,
 				QSEECOM_SBUFF_SIZE);
@@ -2378,13 +2392,19 @@ int hdcp1_set_keys(uint32_t *aksv_msb, uint32_t *aksv_lsb)
 	if (aksv_msb == NULL || aksv_lsb == NULL)
 		return -EINVAL;
 
-	if (!hdcp1_supported || !hdcp1_handle)
-		return -EINVAL;
+	mutex_lock(&hdcp1_ta_cmd_lock);
+
+	if (!hdcp1_supported || !hdcp1_handle) {
+		rc = -EINVAL;
+		goto end;
+	}
 
 	hdcp1_qsee_handle = hdcp1_handle->qsee_handle;
 
-	if (!hdcp1_qsee_handle)
-		return -EINVAL;
+	if (!hdcp1_qsee_handle) {
+		rc = -EINVAL;
+		goto end;
+	}
 
 	/* set keys and request aksv */
 	key_set_req = (struct hdcp1_key_set_req *)hdcp1_qsee_handle->sbuf;
@@ -2400,13 +2420,15 @@ int hdcp1_set_keys(uint32_t *aksv_msb, uint32_t *aksv_lsb)
 
 	if (rc < 0) {
 		pr_err("qseecom cmd failed err=%d\n", rc);
-		return -ENOKEY;
+		rc = -ENOKEY;
+		goto end;
 	}
 
 	rc = key_set_rsp->ret;
 	if (rc) {
 		pr_err("set key cmd failed, rsp=%d\n", key_set_rsp->ret);
-		return -ENOKEY;
+		rc = -ENOKEY;
+		goto end;
 	}
 
 	/* copy bytes into msb and lsb */
@@ -2419,7 +2441,9 @@ int hdcp1_set_keys(uint32_t *aksv_msb, uint32_t *aksv_lsb)
 	*aksv_lsb |= key_set_rsp->ksv[6] << 8;
 	*aksv_lsb |= key_set_rsp->ksv[7];
 
-	return 0;
+end:
+	mutex_unlock(&hdcp1_ta_cmd_lock);
+	return rc;
 }
 
 int hdcp1_validate_receiver_ids(struct hdcp_srm_device_id_t *device_ids,
@@ -2432,6 +2456,10 @@ int hdcp1_validate_receiver_ids(struct hdcp_srm_device_id_t *device_ids,
 	uint32_t rbuf_len;
 	int i = 0;
 	struct qseecom_handle *hdcp1_srmhandle;
+
+	/* do not proceed further if no device connected */
+	if (device_id_cnt == 0)
+		goto end;
 
 	/* If client has not been registered return */
 	if (!hdcp1_supported || !hdcp1_handle)
@@ -2559,8 +2587,10 @@ int hdcp1_set_enc(bool enable)
 
 	hdcp1_qsee_handle = hdcp1_handle->qsee_handle;
 
-	if (!hdcp1_qsee_handle)
-		return -EINVAL;
+	if (!hdcp1_qsee_handle) {
+		rc = -EINVAL;
+		goto end;
+	}
 
 	if (hdcp1_enc_enabled == enable) {
 		pr_info("already %s\n", enable ? "enabled" : "disabled");
@@ -2813,6 +2843,20 @@ static ssize_t hdmi_hdcp2p2_sysfs_wta_min_level_change(struct device *dev,
 	ssize_t ret = count;
 
 	handle = hdcp_drv_mgr->handle;
+
+	/*
+	 * if the stream type from TZ is type 1
+	 * ignore subsequent writes to the min_enc_level
+	 * to avoid state transitions which can potentially
+	 * cause visual artifacts because the stream type
+	 * is already at the highest level and for a HDCP 2.2
+	 * capable sink, we do not need to reduce the stream type
+	 */
+	if (handle &&
+		!handle->non_2p2_present) {
+		pr_info("stream type is 1 returning\n");
+		return ret;
+	}
 
 	rc = kstrtoint(buf, 10, &min_enc_lvl);
 	if (rc) {
