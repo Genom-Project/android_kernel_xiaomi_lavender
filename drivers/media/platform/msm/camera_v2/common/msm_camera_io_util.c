@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2014, 2017, 2019 The Linux Foundataion.
+ * Copyright (C) 2019 XiaoMi, Inc.
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -866,3 +867,4 @@ int msm_camera_hw_write_dt_reg_settings(void __iomem *base,
 		pr_err("%s: Failed dt reg setting write\n", __func__);
 	return rc;
 }
+

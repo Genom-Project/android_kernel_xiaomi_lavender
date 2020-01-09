@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -550,7 +550,7 @@ static void msm_isp_cfg_framedrop_reg(
 	if (MSM_VFE_STREAM_STOP_PERIOD != framedrop_period)
 	{
 		framedrop_pattern = 0x1;
-		if(framedrop_period > 1)
+		if (framedrop_period > 1)
 		framedrop_pattern = framedrop_pattern << (framedrop_period-1);
 	}
 
@@ -3903,9 +3903,7 @@ int msm_isp_update_axi_stream(struct vfe_device *vfe_dev, void *arg)
 			update_cmd->update_type !=
 			UPDATE_STREAM_REMOVE_BUFQ &&
 			update_cmd->update_type !=
-			UPDATE_STREAM_SW_FRAME_DROP &&
-			update_cmd->update_type !=
-			UPDATE_STREAM_REQUEST_FRAMES_VER2) {
+			UPDATE_STREAM_SW_FRAME_DROP) {
 			pr_err("%s: Invalid stream state %d, update cmd %d\n",
 				__func__, stream_info->state,
 				stream_info->stream_id);
