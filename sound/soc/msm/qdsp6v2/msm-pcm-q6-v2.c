@@ -1164,7 +1164,6 @@ static int msm_pcm_adsp_stream_cmd_put(struct snd_kcontrol *kcontrol,
 		goto done;
 	}
 
-	mutex_lock(&pdata->lock);
 	event_data = (struct msm_adsp_event_data *)ucontrol->value.bytes.data;
 	if ((event_data->event_type < ADSP_STREAM_PP_EVENT) ||
 	    (event_data->event_type >= ADSP_STREAM_EVENT_MAX)) {
@@ -2300,7 +2299,6 @@ static int msm_pcm_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 	}
 	mutex_unlock(&pdata->lock);
 done:
-	mutex_unlock(&pdata->lock);
 	return ret;
 }
 
