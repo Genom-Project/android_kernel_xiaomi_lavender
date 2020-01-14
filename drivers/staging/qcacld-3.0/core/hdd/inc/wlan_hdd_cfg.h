@@ -12721,6 +12721,32 @@ enum hw_filter_mode {
 #define CFG_ACTION_OUI_CONNECT_1X1_WITH_1_CHAIN_NAME    "gActionOUIConnect1x1with1TxRxChain"
 #define CFG_ACTION_OUI_CONNECT_1X1_WITH_1_CHAIN_DEFAULT "001018 06 02FFF0040000 BC 21 40 001018 06 02FFF0050000 BC 21 40 001018 06 02FFF4050000 BC 21 40"
 
+/*
+ * <ini>
+ * gActionOUIDisableAggressiveEDCA - Used to specify action OUIs to control
+ * EDCA configuration when join the candidate AP
+ *
+ * This ini is used to specify AP OUIs. The station's EDCA should follow the
+ * APs' when connecting to those AP, even if the gEnableEdcaParams is set.
+ * For example, it follows the AP's EDCA whose OUI is 0050F2 with the
+ * following setting:
+ *     gActionOUIDisableAggressiveEDCA=0050F2 00 01
+ *          Explain: 0050F2: OUI
+ *                   00: data length is 0
+ *                   01: info mask, only OUI present in Info mask
+ * Refer to gEnableActionOUI for more detail about the format.
+ *
+ * Related: gEnableEdcaParams, gEnableActionOUI
+ *
+ * Supported Feature: Action OUIs
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA "gActionOUIDisableAggressiveEDCA"
+#define CFG_ACTION_OUI_DISABLE_AGGRESSIVE_EDCA_DEFAULT ""
+
  /* End of action oui inis */
 
 /*
@@ -15465,6 +15491,74 @@ enum hw_filter_mode {
 #define CFG_PKTCAPTURE_MODE_MAX      (3)
 #define CFG_PKTCAPTURE_MODE_DEFAULT  (0)
 
+#ifdef FW_THERMAL_THROTTLE_SUPPORT
+/*
+ * thermal_sampling_time - Configure the thermal mitigation sampling time in ms.
+ *
+ * @Min: 10
+ * @Max: 100
+ * @Default: 100
+ *
+ * This ini will control the sampling time that the thermal mitigation in FW
+ * will consider while applying the duty cycle.
+ *
+ * Usage: External
+ *
+ * Supported features: Thermal Mitigation
+ *
+ * </ini>
+ */
+#define CFG_THERMAL_SAMPLING_TIME_NAME     "thermal_sampling_time"
+#define CFG_THERMAL_SAMPLING_TIME_MIN      (10)
+#define CFG_THERMAL_SAMPLING_TIME_MAX      (100)
+#define CFG_THERMAL_SAMPLING_TIME_DEFAULT  (100)
+
+/*
+ * thermal_throt_dc - Configure the thermal mitigation duty cycling percentage
+ *
+ * @Min: 0
+ * @Max: 100
+ * @Default: 50
+ *
+ * This ini will control the duty cycle that will be enforced by the firmware.
+ * If for example the duty cycle is 50 percent and the sampling time
+ * (thermal_sampling_time) is 100ms then the FW will constrain rx/tx for 50ms
+ * out of the 100ms.
+ *
+ * Usage: External
+ *
+ * Supported features: Thermal Mitigation
+ *
+ * </ini>
+ */
+#define CFG_THERMAL_THROT_DC_NAME     "thermal_throt_dc"
+#define CFG_THERMAL_THROT_DC_MIN      (10)
+#define CFG_THERMAL_THROT_DC_MAX      (100)
+#define CFG_THERMAL_THROT_DC_DEFAULT  (50)
+#endif
+/*
+ * <ini>
+ * disable_4way_hs_offload - Enable/Disable 4 way handshake offload to firmware
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * 0  4-way HS to be handled in firmware
+ * 1  4-way HS to be handled in supplicant
+ *
+ * Related: None
+ *
+ * Supported Feature: STA Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_DISABLE_4WAY_HS_OFFLOAD           "disable_4way_hs_offload"
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MIN       (0)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MAX       (1)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT   (0)
+
 /*
  * Type declarations
  */
@@ -16332,6 +16426,7 @@ struct hdd_config {
 	uint8_t action_oui_ito_alternate[MAX_ACTION_OUI_STRING_LEN];
 	uint8_t action_oui_switch_to_11n[MAX_ACTION_OUI_STRING_LEN];
 	uint8_t action_oui_connect_1x1_with_1_chain[MAX_ACTION_OUI_STRING_LEN];
+	uint8_t action_oui_disable_aggressive_edca[MAX_ACTION_OUI_STRING_LEN];
 	uint8_t rssi_weightage;
 	uint8_t ht_caps_weightage;
 	uint8_t vht_caps_weightage;
@@ -16425,6 +16520,12 @@ struct hdd_config {
 
 	bool pktcap_mode_enable;
 	uint8_t pktcapture_mode;
+
+#ifdef FW_THERMAL_THROTTLE_SUPPORT
+	uint16_t thermal_sampling_time;
+	uint16_t thermal_throt_dc;
+#endif
+	bool disable_4way_hs_offload;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))
